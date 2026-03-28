@@ -35,10 +35,22 @@ export function RoomScreen({ room, playerId, onReady, onStart, onLeave }: Props)
 
       {/* Room Info */}
       <div className="text-center mb-6">
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+            room.gameType === "tug-war"
+              ? "bg-orange-500/20 text-orange-400"
+              : "bg-accent-1/20 text-accent-1"
+          }`}>
+            {room.gameType === "tug-war" ? "🪢 Tug of War" : "🏁 Tap Race"}
+          </span>
+        </div>
         <h2 className="text-xl font-bold text-text-primary">Waiting Room</h2>
         <p className="text-text-secondary text-sm mt-1">
           {connectedPlayers.length}/{room.maxPlayers} players
         </p>
+        {room.gameType === "tug-war" && (
+          <p className="text-text-muted text-xs mt-1 italic">Teams assigned on start</p>
+        )}
       </div>
 
       {/* Player List */}
@@ -85,7 +97,7 @@ export function RoomScreen({ room, playerId, onReady, onStart, onLeave }: Props)
             disabled={!canStart}
             className="w-full py-4 bg-gradient-to-r from-accent-1 to-accent-2 hover:from-accent-2 hover:to-accent-3 rounded-xl font-bold text-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed animate-pulse-glow"
           >
-            🏁 Start Race
+            {room.gameType === "tug-war" ? "🪢 Start Tug of War" : "🏁 Start Race"}
           </button>
         )}
 

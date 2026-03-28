@@ -1,25 +1,42 @@
 import { useState, useCallback, useRef } from "react";
 import { useSocket } from "./useSocket";
 import { getSessionPlayerId, saveName } from "../config";
-import type { GamePhase, RoomView, RacePlayerView, ServerEvent } from "../types";
+import type {
+  GamePhase,
+  GameType,
+  RoomView,
+  RacePlayerView,
+  RoomListItem,
+  TugState,
+  TugResult,
+  ServerEvent,
+} from "../types";
 
 export interface GameState {
   phase: GamePhase;
+  gameType: GameType;
   room: RoomView | null;
   playerId: string;
   countdown: number | null;
   raceProgress: RacePlayerView[];
   rankings: RacePlayerView[];
+  availableRooms: RoomListItem[];
+  tugState: TugState | null;
+  tugResult: TugResult | null;
   error: string | null;
 }
 
 const initialState: GameState = {
-  phase: "lobby",
+  phase: "home",
+  gameType: "tap-race",
   room: null,
   playerId: getSessionPlayerId(),
   countdown: null,
   raceProgress: [],
   rankings: [],
+  availableRooms: [],
+  tugState: null,
+  tugResult: null,
   error: null,
 };
 
@@ -56,11 +73,11 @@ export function useGame() {
           case "countdown":
             phase = "countdown";
             break;
-          case "racing":
-            phase = "racing";
+          case "playing":
+            phase = room.gameType === "tug-war" ? "tug-playing" : "racing";
             break;
           case "finished":
-            phase = "result";
+            phase = room.gameType === "tug-war" ? "tug-result" : "result";
             break;
           default:
             phase = "room";
@@ -69,12 +86,20 @@ export function useGame() {
           ...s,
           room,
           phase,
+          gameType: room.gameType,
           error: null,
         }));
         break;
       }
 
-      case "race.countdown":
+      case "room.listResult":
+        setState((s) => ({
+          ...s,
+          availableRooms: event.payload.rooms,
+        }));
+        break;
+
+      case "game.countdown":
         setState((s) => ({
           ...s,
           phase: "countdown",
@@ -98,6 +123,22 @@ export function useGame() {
         }));
         break;
 
+      case "tug.state":
+        setState((s) => ({
+          ...s,
+          phase: "tug-playing",
+          tugState: event.payload,
+        }));
+        break;
+
+      case "tug.finished":
+        setState((s) => ({
+          ...s,
+          phase: "tug-result",
+          tugResult: event.payload,
+        }));
+        break;
+
       case "error":
         setState((s) => ({
           ...s,
@@ -109,32 +150,69 @@ export function useGame() {
 
   const { state: socketState, connect, disconnect, send } = useSocket(handleMessage);
 
-  // Actions
-  const createRoom = useCallback(
-    (name: string, maxPlayers?: number) => {
-      saveName(name);
+  // ============================================================
+  // Navigation Actions
+  // ============================================================
+
+  /** Select a game type from home screen → go to game lobby */
+  const selectGame = useCallback(
+    (gameType: GameType) => {
+      setState((s) => ({ ...s, gameType, phase: "game-lobby", availableRooms: [] }));
       connect();
-      // Need a small delay for connection to establish
+      // Request room list after connection establishes
       setTimeout(() => {
-        send({
-          type: "room.create",
-          payload: { sessionPlayerId: getSessionPlayerId(), name, maxPlayers },
-        });
+        send({ type: "room.list", payload: { gameType } });
       }, 500);
     },
     [connect, send]
   );
 
+  /** Go back to home screen */
+  const backToHome = useCallback(() => {
+    disconnect();
+    setState({ ...initialState });
+  }, [disconnect]);
+
+  /** Refresh room list */
+  const refreshRoomList = useCallback(() => {
+    const gt = stateRef.current.gameType;
+    send({ type: "room.list", payload: { gameType: gt } });
+  }, [send]);
+
+  // ============================================================
+  // Room Actions
+  // ============================================================
+
+  const createRoom = useCallback(
+    (name: string, maxPlayers?: number) => {
+      saveName(name);
+      const gt = stateRef.current.gameType;
+      send({
+        type: "room.create",
+        payload: { sessionPlayerId: getSessionPlayerId(), name, maxPlayers, gameType: gt },
+      });
+    },
+    [send]
+  );
+
   const joinRoom = useCallback(
     (roomId: string, name: string) => {
       saveName(name);
-      connect();
-      setTimeout(() => {
+      // If not connected yet (e.g., from share URL), connect first
+      if (stateRef.current.phase === "home") {
+        connect();
+        setTimeout(() => {
+          send({
+            type: "room.join",
+            payload: { sessionPlayerId: getSessionPlayerId(), roomId: roomId.toUpperCase(), name },
+          });
+        }, 500);
+      } else {
         send({
           type: "room.join",
           payload: { sessionPlayerId: getSessionPlayerId(), roomId: roomId.toUpperCase(), name },
         });
-      }, 500);
+      }
     },
     [connect, send]
   );
@@ -148,16 +226,26 @@ export function useGame() {
     [send]
   );
 
-  const startRace = useCallback(() => {
+  const startGame = useCallback(() => {
     const room = stateRef.current.room;
     if (!room) return;
     send({ type: "room.start", payload: { roomId: room.roomId } });
   }, [send]);
 
+  // ============================================================
+  // Game Actions
+  // ============================================================
+
   const tap = useCallback(() => {
     const room = stateRef.current.room;
     if (!room) return;
     send({ type: "race.tap", payload: { roomId: room.roomId } });
+  }, [send]);
+
+  const tugTap = useCallback(() => {
+    const room = stateRef.current.room;
+    if (!room) return;
+    send({ type: "tug.tap", payload: { roomId: room.roomId } });
   }, [send]);
 
   const leaveRoom = useCallback(() => {
@@ -166,7 +254,7 @@ export function useGame() {
       send({ type: "room.leave", payload: { roomId: room.roomId } });
     }
     disconnect();
-    setState(initialState);
+    setState({ ...initialState });
   }, [send, disconnect]);
 
   const clearError = useCallback(() => {
@@ -176,11 +264,15 @@ export function useGame() {
   return {
     ...state,
     socketState,
+    selectGame,
+    backToHome,
+    refreshRoomList,
     createRoom,
     joinRoom,
     setReady,
-    startRace,
+    startGame,
     tap,
+    tugTap,
     leaveRoom,
     clearError,
   };
