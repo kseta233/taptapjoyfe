@@ -8,14 +8,15 @@ export function RoomCode({ code }: Props) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
+    const shareUrl = `${window.location.origin}/?room=${code}`;
     try {
-      await navigator.clipboard.writeText(code);
+      await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback for mobile
       const input = document.createElement("input");
-      input.value = code;
+      input.value = shareUrl;
       document.body.appendChild(input);
       input.select();
       document.execCommand("copy");

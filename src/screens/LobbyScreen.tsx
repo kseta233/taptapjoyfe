@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getSavedName } from "../config";
 
 interface Props {
@@ -8,9 +8,21 @@ interface Props {
 
 export function LobbyScreen({ onCreateRoom, onJoinRoom }: Props) {
   const [name, setName] = useState(getSavedName());
-  const [roomCode, setRoomCode] = useState("");
+  const [roomCode, setRoomCode] = useState(() => {
+    const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+    return params.get("room")?.toUpperCase().slice(0, 6) || "";
+  });
 
   const isNameValid = name.trim().length > 0 && name.trim().length <= 20;
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get("room");
+    if (room && isNameValid) {
+      onJoinRoom(room.toUpperCase().slice(0, 6), name.trim());
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   return (
     <div className="h-full flex flex-col items-center justify-center px-6 gap-8">
@@ -58,14 +70,14 @@ export function LobbyScreen({ onCreateRoom, onJoinRoom }: Props) {
           <div className="h-px flex-1 bg-border"></div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-3">
           <input
             type="text"
             value={roomCode}
             onChange={(e) => setRoomCode(e.target.value.toUpperCase().slice(0, 6))}
             placeholder="ROOM CODE"
             maxLength={6}
-            className="flex-1 px-4 py-3 bg-bg-card border border-border rounded-xl text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-1 focus:ring-1 focus:ring-accent-1/50 transition-all text-center font-mono text-lg tracking-widest uppercase"
+            className="w-full px-4 py-3 bg-bg-card border border-border rounded-xl text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-1 focus:ring-1 focus:ring-accent-1/50 transition-all text-center font-mono text-lg tracking-widest uppercase"
           />
           <button
             onClick={() => {
@@ -73,9 +85,9 @@ export function LobbyScreen({ onCreateRoom, onJoinRoom }: Props) {
               onJoinRoom(roomCode, name.trim());
             }}
             disabled={!isNameValid || roomCode.length < 4}
-            className="px-6 py-3 bg-accent-1 hover:bg-accent-2 rounded-xl font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full py-4 bg-bg-card border-2 border-border hover:border-accent-1 rounded-xl font-bold text-lg text-text-primary transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Join
+            Join Room
           </button>
         </div>
       </div>
