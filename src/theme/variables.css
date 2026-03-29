@@ -1,0 +1,38 @@
+:root {
+  --ion-background-color: #0a0e1a;
+  --ion-background-color-rgb: 10, 14, 26;
+  --ion-text-color: #f1f5f9;
+  --ion-text-color-rgb: 241, 245, 249;
+
+  --ion-color-primary: #6366f1;
+  --ion-color-primary-rgb: 99, 102, 241;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #575adb;
+  --ion-color-primary-tint: #7375f2;
+
+  --ion-color-secondary: #8b5cf6;
+  --ion-color-secondary-rgb: 139, 92, 246;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #7a51d8;
+  --ion-color-secondary-tint: #976cf7;
+
+  --ion-color-success: #22c55e;
+  --ion-color-warning: #f59e0b;
+  --ion-color-danger: #ef4444;
+
+  --ion-card-background: #1a2035;
+  --ion-item-background: transparent;
+  --ion-border-color: #1e293b;
+
+  --app-bg-primary: #0a0e1a;
+  --app-bg-secondary: #111827;
+  --app-bg-card: #1a2035;
+  --app-accent-1: #6366f1;
+  --app-accent-2: #8b5cf6;
+  --app-accent-3: #a855f7;
+  --app-text-primary: #f1f5f9;
+  --app-text-secondary: #94a3b8;
+  --app-text-muted: #64748b;
+}

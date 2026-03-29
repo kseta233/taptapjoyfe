@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TapTapJoy</string>
+    <string name="title_activity_main">TapTapJoy</string>
+    <string name="package_name">com.taptapjoy.app</string>
+    <string name="custom_url_scheme">com.taptapjoy.app</string>
+</resources>
